@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/empires-security-mcp-oauth2-aws-cognito-badge.png)](https://mseep.ai/app/empires-security-mcp-oauth2-aws-cognito)
+
 # MCP + OAuth2.1 + AWS Cognito Example
 
 ## Overview
