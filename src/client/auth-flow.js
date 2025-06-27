@@ -49,6 +49,8 @@ async function initiateAuthFlow(authServerInfo) {
   authUrl.searchParams.append('state', state);
   authUrl.searchParams.append('code_challenge', codeChallenge);
   authUrl.searchParams.append('code_challenge_method', 'S256');
+  // RFC 8707 Resource Indicators - specify intended resource server
+  authUrl.searchParams.append('resource', config.mcpServer.baseUrl);
   
   return authUrl.toString();
 }
@@ -77,7 +79,9 @@ async function handleCallback(code, authServerInfo) {
       client_secret: config.oauth.clientSecret,
       redirect_uri: config.oauth.redirectUri,
       code,
-      code_verifier: codeVerifier
+      code_verifier: codeVerifier,
+      // RFC 8707 Resource Indicators - specify intended resource server
+      resource: config.mcpServer.baseUrl
     }),
     {
       headers: {

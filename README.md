@@ -2,18 +2,27 @@
 
 ## Overview
 
-This repository demonstrates how to secure a Model Context Protocol (MCP) server using OAuth 2.1 authorization flows with AWS Cognito, implemented entirely with Node.js and Express.js.
+This repository demonstrates how to secure a Model Context Protocol (MCP) server using OAuth 2.1 authorization flows, implemented entirely with Node.js and Express.js. While this example uses AWS Cognito as the backing authorization server, the implementation is **provider-agnostic** and can work with any OAuth 2.1 compliant authorization server.
 
-Based on the new MCP Authorization Specification published in April 2025, this project showcases:
-- MCP server acting as a **Resource Server** (RS)
-- AWS Cognito acting as an **Authorization Server** (AS)
-- OAuth 2.1 Authorization Code Flow with PKCE
+Based on the MCP Authorization Specification (version 2025-06-18), this project showcases:
+- MCP server acting as a **Resource Server** (RS) with generic OAuth endpoints
+- Provider-agnostic OAuth 2.1 implementation (example uses AWS Cognito)
+- OAuth 2.1 Authorization Code Flow with PKCE and RFC 8707 Resource Indicators
 - Protected Resource Metadata (PRM) document discovery
-- Dynamic discovery of Authorization Server metadata
+- **Fully dynamic** authorization server metadata discovery
 - Dynamic Client Registration (DCR) support
+- Enhanced security features from MCP 2025-06-18 specification
 - Two client implementations:
   - Static client with pre-configured credentials
   - Auto-discovery client with dynamic registration
+
+## Provider-Agnostic Design
+
+This implementation follows OAuth 2.1 standards to ensure compatibility with any compliant authorization server:
+- **MCP Server**: Exposes standard OAuth metadata endpoints and proxies to the backing authorization server
+- **Clients**: Discover authorization servers dynamically without hardcoded provider-specific logic
+- **Token Validation**: Uses discovered JWKS URIs and issuer information from authorization server metadata
+- **Flexible Backend**: While Cognito is used as an example, any OAuth 2.1 server can be substituted
 
 ## Understanding the New MCP Authorization Spec
 
@@ -28,13 +37,13 @@ Key components of the specification:
 
 2. **Discovery Process**
    - When a client receives a 401 Unauthorized response, the WWW-Authenticate header contains a pointer to the PRM document
-   - Client fetches the PRM document to discover the authorization server
-   - Client then fetches the authorization server metadata to discover the endpoints
+   - Client fetches the PRM document to discover the authorization server URL
+   - Client fetches authorization server metadata dynamically from the discovered URL (no hardcoded endpoints)
 
 3. **OAuth 2.1 Authorization**
    - Authorization Code flow with PKCE
    - Bearer token usage for authenticated requests
-   - Token validation on the server side
+   - Dynamic token validation using discovered JWKS URIs and issuer information
 
 4. **Dynamic Client Registration (DCR)**
    - Allows clients to automatically register with new MCP servers
@@ -44,19 +53,19 @@ Key components of the specification:
    - Provides a standardized way to obtain OAuth client credentials
    - Follows RFC7591 (OAuth 2.0 Dynamic Client Registration Protocol)
 
-This implementation showcases how to apply these concepts with AWS Cognito, including implementing Dynamic Client Registration through custom API Gateway endpoints and Lambda functions.
+This implementation showcases how to apply these concepts in a provider-agnostic way. The example uses AWS Cognito with custom Dynamic Client Registration through API Gateway endpoints and Lambda functions, but the core OAuth flow works with any compliant authorization server.
 
 ## Architecture
 ```
-Client → MCP Server → AWS Cognito
-        (Resource Server)    (Authorization Server)
+Client → MCP Server → Authorization Server (e.g., AWS Cognito)
+        (Resource Server)    (OAuth 2.1 Provider)
 ```
 1. Client sends a request without a token.
 2. MCP server responds with 401 Unauthorized + WWW-Authenticate header pointing to PRM metadata.
-3. Client retrieves PRM, discovers the Authorization Server URL.
-4. Client performs OAuth 2.1 Authorization Code flow (with PKCE) against AWS Cognito.
+3. Client retrieves PRM, discovers the Authorization Server URL dynamically.
+4. Client fetches authorization server metadata and performs OAuth 2.1 Authorization Code flow (with PKCE).
 5. Client obtains an access token and retries request to MCP server.
-6. MCP server validates token and grants access to the protected resource.
+6. MCP server validates token using dynamically discovered JWKS and grants access to the protected resource.
 
 For detailed overview, see the [Architecture Overview](./docs/architecture-guide.md).
 

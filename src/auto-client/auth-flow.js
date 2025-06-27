@@ -77,6 +77,9 @@ async function initiateAuthFlow(authServerInfo, clientInfo) {
   authUrl.searchParams.append('state', state);
   authUrl.searchParams.append('code_challenge', codeChallenge);
   authUrl.searchParams.append('code_challenge_method', 'S256');
+  // RFC 8707 Resource Indicators - specify intended resource server
+  const config = require('../shared/config');
+  authUrl.searchParams.append('resource', config.mcpServer.baseUrl);
   
   return authUrl.toString();
 }
@@ -97,6 +100,7 @@ async function handleCallback(code, authServerInfo, clientInfo) {
   }
   
   // Exchange the authorization code for tokens
+  const config = require('../shared/config');
   const tokenResponse = await axios.post(
     authServerMetadata.token_endpoint,
     querystring.stringify({
@@ -105,7 +109,9 @@ async function handleCallback(code, authServerInfo, clientInfo) {
       client_secret: clientInfo.client_secret,
       redirect_uri: clientInfo.redirect_uris[0],
       code,
-      code_verifier: codeVerifier
+      code_verifier: codeVerifier,
+      // RFC 8707 Resource Indicators - specify intended resource server
+      resource: config.mcpServer.baseUrl
     }),
     {
       headers: {

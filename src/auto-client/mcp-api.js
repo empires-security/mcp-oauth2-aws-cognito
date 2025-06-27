@@ -6,7 +6,7 @@ async function getMcpData(accessToken) {
     const response = await axios.get(`${config.mcpServer.baseUrl}/v1/contexts`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'MCP-Protocol-Version': '2024-11-05'
+        'MCP-Protocol-Version': '2025-06-18'
       }
     });
     

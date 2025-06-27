@@ -1,52 +1,56 @@
-# MCP OAuth 2.1 AWS Cognito - Architecture Overview
+# MCP OAuth 2.1 Provider-Agnostic Architecture Overview
 
-This document explains the architecture of the MCP OAuth 2.1 implementation with AWS Cognito as the Authorization Server.
+This document explains the architecture of the MCP OAuth 2.1 implementation. While this example uses AWS Cognito as the Authorization Server, the implementation is **provider-agnostic** and works with any OAuth 2.1 compliant authorization server.
 
 ## System Architecture
 
-The implementation is based on a clean separation between the MCP server (Resource Server) and AWS Cognito (Authorization Server) as defined in the latest MCP Authorization specification.
+The implementation is based on a clean separation between the MCP server (Resource Server) and the Authorization Server as defined in the latest MCP Authorization specification. The key innovation is that all discovery and validation happens dynamically without hardcoded provider-specific logic.
 
 ## Components
 
 ### 1. MCP Client (Express.js)
 
 A Node.js Express application that implements:
-- Discovery of the Authorization Server through Protected Resource Metadata
-- OAuth 2.1 Authorization Code flow with PKCE
+- **Dynamic** discovery of Authorization Servers through Protected Resource Metadata
+- Provider-agnostic OAuth 2.1 Authorization Code flow with PKCE
 - Token management (storage, refresh, etc.)
 - Authenticated API calls to the MCP server
 
 The client follows this process:
 1. Makes initial request to the MCP server
 2. Receives 401 with WWW-Authenticate header pointing to resource metadata
-3. Fetches resource metadata to discover authorization server
-4. Initiates OAuth flow with Cognito (with PKCE for security)
-5. Receives and stores tokens
-6. Uses access token for authenticated requests
+3. Fetches resource metadata to discover authorization server URL
+4. **Dynamically fetches** authorization server metadata from discovered URL
+5. Initiates OAuth flow using discovered endpoints (with PKCE for security)
+6. Receives and stores tokens
+7. Uses access token for authenticated requests
 
 ### 2. MCP Server (Resource Server, Express.js)
 
 Implemented using Express.js:
 - Serves the Protected Resource Metadata document at `/.well-known/oauth-protected-resource`
-- Validates access tokens from Cognito
+- **Exposes generic OAuth authorization server metadata** at `/.well-known/oauth-authorization-server` (proxies to backing provider)
+- **Dynamically validates access tokens** using discovered JWKS URIs and issuer information
 - Returns 401 with appropriate WWW-Authenticate header for unauthenticated requests
 - Provides MCP API endpoints as protected resources
 
-### 3. AWS Cognito (Authorization Server)
+### 3. Authorization Server (AWS Cognito in this example)
 
-Serves as the OAuth 2.1 Authorization Server:
+Serves as the OAuth 2.1 Authorization Server (any compliant provider can be used):
 - Manages user authentication and authorization
 - Issues access tokens and refresh tokens
 - Provides JWT tokens with proper claims
 - Supports authorization code flow with PKCE
+- **Note**: While Cognito is used as an example, any OAuth 2.1 compliant authorization server can be substituted
 
 ### 4. Auto-Discovery Client (Express.js)
 
 A variant of the MCP Client that adds:
 - Support for OAuth 2.1 Dynamic Client Registration
-- Complete auto-discovery flow without pre-configuration
-- Registration with DCR endpoint through API Gateway
+- **Complete auto-discovery flow** without any pre-configuration
+- Registration with DCR endpoint (API Gateway in this example)
 - OAuth flow using dynamically obtained credentials
+- **Fully provider-agnostic** - works with any OAuth server that supports DCR
 
 ### 5. Dynamic Client Registration API (API Gateway + Lambda)
 
