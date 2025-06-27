@@ -57,7 +57,7 @@ module.exports = {
         return '';
       }
       
-      return `https://cognito-idp.${region}.amazonaws.com/${userPoolId}/.well-known/oauth-authorization-server`
+      return `https://cognito-idp.${region}.amazonaws.com/${userPoolId}/.well-known/openid-configuration`
     })()
   },
   

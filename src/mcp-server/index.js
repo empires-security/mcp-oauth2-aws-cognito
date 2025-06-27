@@ -26,6 +26,39 @@ app.get('/.well-known/oauth-protected-resource', (req, res) => {
   res.json(metadata);
 });
 
+// Generic OAuth authorization server metadata endpoint (proxies to Cognito)
+app.get('/.well-known/oauth-authorization-server', async (req, res) => {
+  try {
+    // Proxy request to the actual Cognito authorization server metadata
+    const axios = require('axios');
+    
+    // Cognito uses OpenID Connect configuration, not OAuth authorization server endpoint
+    // Convert the configured auth server URL to the correct OpenID configuration endpoint
+    let cognitoMetadataUrl = config.cognito.authServerUrl;
+    
+    // If the configured URL points to oauth-authorization-server, change it to openid-configuration
+    if (cognitoMetadataUrl.includes('/.well-known/oauth-authorization-server')) {
+      cognitoMetadataUrl = cognitoMetadataUrl.replace('/.well-known/oauth-authorization-server', '/.well-known/openid-configuration');
+    }
+    // If it doesn't have any well-known endpoint, add the OpenID configuration one
+    else if (!cognitoMetadataUrl.includes('/.well-known/')) {
+      cognitoMetadataUrl = `${cognitoMetadataUrl}/.well-known/openid-configuration`;
+    }
+    
+    console.log(`Proxying authorization server metadata request to: ${cognitoMetadataUrl}`);
+    const response = await axios.get(cognitoMetadataUrl);
+    
+    // Return the Cognito metadata as-is
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error proxying authorization server metadata:', error.message);
+    res.status(500).json({
+      error: 'server_error',
+      error_description: 'Unable to retrieve authorization server metadata'
+    });
+  }
+});
+
 app.get('/.well-known/oauth-dynamic-client-registration', (req, res) => {
   res.json({
     registration_endpoint: process.env.DCR_ENDPOINT || 'https://api-gateway-url/v1/register',
@@ -33,7 +66,7 @@ app.get('/.well-known/oauth-dynamic-client-registration', (req, res) => {
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
-    service_documentation: `${config.baseUrl}/docs/dcr`
+    service_documentation: `${config.mcpServer.baseUrl}/docs/dcr`
   });
 });
 
@@ -43,7 +76,7 @@ const requireAuth = async (req, res, next) => {
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).set({
-      'WWW-Authenticate': `Bearer resource_metadata="${config.baseUrl}/.well-known/oauth-protected-resource"`
+      'WWW-Authenticate': `Bearer resource_metadata="${config.mcpServer.baseUrl}/.well-known/oauth-protected-resource"`
     }).json({
       error: 'unauthorized',
       error_description: 'Valid bearer token required'
@@ -59,7 +92,7 @@ const requireAuth = async (req, res, next) => {
   } catch (error) {
     console.error('Token validation failed:', error.message);
     return res.status(401).set({
-      'WWW-Authenticate': `Bearer resource_metadata="${config.baseUrl}/.well-known/oauth-protected-resource", error="invalid_token", error_description="${error.message}"`
+      'WWW-Authenticate': `Bearer resource_metadata="${config.mcpServer.baseUrl}/.well-known/oauth-protected-resource", error="invalid_token", error_description="${error.message}"`
     }).json({
       error: 'unauthorized',
       error_description: error.message
