@@ -40,15 +40,17 @@ async function discovery(mcpServerUrl) {
       const authServerUrl = resourceMetadata.authorization_servers[0];
       console.log(`Discovered authorization server: ${authServerUrl}`);
       
-      // Construct the authorization server metadata manually for Cognito
-      const authServerMetadata = {
-        issuer: config.cognito.issuer,
-        authorization_endpoint: `https://${config.cognito.domain}.auth.${config.cognito.region}.amazoncognito.com/oauth2/authorize`,
-        token_endpoint: `https://${config.cognito.domain}.auth.${config.cognito.region}.amazoncognito.com/oauth2/token`,
-        jwks_uri: `${config.cognito.issuer}/.well-known/jwks.json`
-      };
+      // Fetch the authorization server metadata dynamically
+      console.log(`Fetching authorization server metadata from: ${authServerUrl}`);
+      const authServerMetadataResponse = await axios.get(authServerUrl);
+      const authServerMetadata = authServerMetadataResponse.data;
       
-      console.log('Constructed Authorization Server Metadata:', authServerMetadata);
+      // Validate required fields
+      if (!authServerMetadata.authorization_endpoint || !authServerMetadata.token_endpoint) {
+        throw new Error('Invalid authorization server metadata - missing required endpoints');
+      }
+      
+      console.log('Fetched Authorization Server Metadata:', authServerMetadata);
       
       return {
         resourceMetadata,
