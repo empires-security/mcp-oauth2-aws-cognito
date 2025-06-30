@@ -51,8 +51,8 @@ app.get('/login', async (req, res) => {
     if (!req.session.clientInfo) {
       console.log('No client registration found. Initiating dynamic client registration...');
       
-      // Register a client
-      const clientInfo = await registerClient(authServerInfo, config.dcrEndpoint);
+      // Register a client using discovered registration_endpoint
+      const clientInfo = await registerClient(authServerInfo, authServerInfo.registration_endpoint);
       
       // Store client info in session
       req.session.clientInfo = clientInfo;

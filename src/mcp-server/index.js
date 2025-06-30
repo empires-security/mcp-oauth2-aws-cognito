@@ -48,8 +48,11 @@ app.get('/.well-known/oauth-authorization-server', async (req, res) => {
     console.log(`Proxying authorization server metadata request to: ${cognitoMetadataUrl}`);
     const response = await axios.get(cognitoMetadataUrl);
     
-    // Return the Cognito metadata as-is
-    res.json(response.data);
+    // Add registration_endpoint to the metadata for RFC 8414 compliance
+    const metadata = response.data;
+    metadata.registration_endpoint = process.env.DCR_ENDPOINT;
+    
+    res.json(metadata);
   } catch (error) {
     console.error('Error proxying authorization server metadata:', error.message);
     res.status(500).json({
@@ -59,16 +62,6 @@ app.get('/.well-known/oauth-authorization-server', async (req, res) => {
   }
 });
 
-app.get('/.well-known/oauth-dynamic-client-registration', (req, res) => {
-  res.json({
-    registration_endpoint: process.env.DCR_ENDPOINT || 'https://api-gateway-url/v1/register',
-    registration_endpoint_auth_methods_supported: ['none'],
-    response_types_supported: ['code'],
-    grant_types_supported: ['authorization_code', 'refresh_token'],
-    token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
-    service_documentation: `${config.mcpServer.baseUrl}/docs/dcr`
-  });
-});
 
 // Middleware to validate access tokens
 const requireAuth = async (req, res, next) => {
