@@ -122,5 +122,5 @@ app.post('/v1/contexts', requireAuth, (req, res) => {
 app.listen(PORT, () => {
   console.log(`MCP Server running on port ${PORT}`);
   console.log(`Protected Resource Metadata available at: http://localhost:${PORT}/.well-known/oauth-protected-resource`);
-  console.log(`DCR Metadata available at: http://localhost:${PORT}/.well-known/oauth-dynamic-client-registration`);
+  console.log(`Authorization Server Metadata (includes registration_endpoint): http://localhost:${PORT}/.well-known/oauth-authorization-server`);
 });
