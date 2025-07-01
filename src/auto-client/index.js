@@ -52,7 +52,7 @@ app.get('/login', async (req, res) => {
       console.log('No client registration found. Initiating dynamic client registration...');
       
       // Register a client using discovered registration_endpoint
-      const clientInfo = await registerClient(authServerInfo, authServerInfo.registration_endpoint);
+      const clientInfo = await registerClient(authServerInfo, authServerInfo.authServerMetadata.registration_endpoint);
       
       // Store client info in session
       req.session.clientInfo = clientInfo;
