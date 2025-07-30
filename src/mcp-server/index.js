@@ -52,6 +52,12 @@ app.get('/.well-known/oauth-authorization-server', async (req, res) => {
     const metadata = response.data;
     metadata.registration_endpoint = process.env.DCR_ENDPOINT;
     
+    // Add PKCE support indication if not already present
+    // AWS Cognito supports PKCE but doesn't advertise it in metadata
+    if (!metadata.code_challenge_methods_supported) {
+      metadata.code_challenge_methods_supported = ['S256'];
+    }
+    
     res.json(metadata);
   } catch (error) {
     console.error('Error proxying authorization server metadata:', error.message);
