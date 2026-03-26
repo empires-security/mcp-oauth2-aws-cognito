@@ -42,6 +42,7 @@ This guide walks through setting up and running the MCP OAuth 2.1 demo with AWS 
    - Review generated `.env` files in:
      * `src/client/.env`
      * `src/auto-client/.env`
+     * `src/metadata-client/.env`
      * `src/mcp-server/.env`
    - Compare with `.env.example` files
    - Manually verify/update CLIENT_SECRET if needed
@@ -71,17 +72,25 @@ npm run dev
 
 ```
 /mcp-server
-  - Minimal protected resource server
+  - Express.js Resource Server with OAuth endpoints
   - Serves /.well-known/oauth-protected-resource
+  - Proxies authorization server metadata from Cognito
+  - CIMD resolution bridge endpoint
+
+/client
+  - Pre-registered client (static credentials)
+  - Handles discovery, PKCE, and token usage
 
 /auto-client
-  - Dynamic client registration example
+  - Dynamic client registration (DCR) example
   - Auto-discovers and registers with authorization server
   - Handles OAuth 2.1 flow with dynamically obtained credentials
 
-/client
-  - Example client to demonstrate the OAuth 2.1 flow
-  - Handles discovery, PKCE, and token usage
+/metadata-client
+  - Client ID Metadata Document (CIMD) example
+  - Publishes metadata at /client-metadata.json
+  - Uses metadata URL as client_id with standard OAuth endpoints
+  - No custom code — proxy handles CIMD transparently
 
 /docs
   - Setup guides and explanations
@@ -115,6 +124,20 @@ Visit `http://localhost:3002` in your browser and follow these steps:
 3. After authentication, you'll be redirected back to the auto-client
 4. Click "Fetch MCP Data" to make an authenticated request with the dynamically registered client
 
+### 6. CIMD Client (Client ID Metadata Document)
+
+Visit `http://localhost:3003` in your browser and follow these steps:
+
+1. Verify the metadata document is served at `http://localhost:3003/client-metadata.json`
+2. Click the "Log in" button
+3. The client will:
+   - Auto-discover the MCP server and authorization endpoints
+   - Check for `client_id_metadata_document_supported` in auth server metadata
+   - Redirect to the authorization endpoint using its metadata URL as `client_id`
+   - The MCP server's proxy transparently resolves the CIMD and forwards to Cognito
+   - Cognito presents the login page
+4. After authentication, you'll be redirected back to the metadata client
+5. Click "Fetch MCP Data" to make an authenticated request
 
 ## Architecture Overview
 - Detailed [Architecture Overview](./architecture-guide.md)
@@ -126,9 +149,11 @@ Visit `http://localhost:3002` in your browser and follow these steps:
    - Implements OAuth 2.1 authorization code flow with PKCE
    - Makes authenticated requests to the MCP server
 
-2. **MCP Server**: Implemented as AWS API Gateway + Lambda that:
+2. **MCP Server**: Implemented as Express.js Resource Server that:
    - Serves the Protected Resource Metadata document
-   - Validates access tokens from Cognito
+   - Proxies authorization server metadata (augments with DCR and CIMD support)
+   - Proxies authorization and token endpoints for transparent CIMD handling
+   - Validates access tokens using dynamically discovered JWKS
    - Provides protected API endpoints for MCP operations
 
 3. **AWS Cognito**: Acts as the OAuth 2.1 Authorization Server:
@@ -157,10 +182,11 @@ mcp-oauth2-aws-cognito/
 │   └── cloudformation/        # CloudFormation templates
 ├── scripts/                   # Deployment scripts
 ├── src/
-│   ├── mcp-server/            # MCP server implementation
-│   ├── auto-client/           # MCP auto discovery client implementation
-│   ├── client/                # MCP client implementation
-│   └── shared/                # Shared utilities
+│   ├── mcp-server/            # MCP Resource Server (Express.js)
+│   ├── client/                # Pre-registered client (static credentials)
+│   ├── auto-client/           # DCR auto-discovery client
+│   ├── metadata-client/       # CIMD client (Client ID Metadata Document)
+│   └── shared/                # Shared configuration
 └── docs/                      # Documentation
 ```
 

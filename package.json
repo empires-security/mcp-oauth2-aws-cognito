@@ -1,19 +1,21 @@
 {
     "name": "mcp-oauth2-aws-cognito",
     "version": "1.0.0",
-    "description": "Demo of MCP OAuth2.1 integration with AWS Cognito",
+    "description": "Demo of MCP OAuth 2.1 integration with AWS Cognito — showcasing pre-registered, DCR, and CIMD client registration methods",
     "main": "index.js",
     "scripts": {
         "install:client": "cd src/client && npm install",
         "install:auto-client": "cd src/auto-client && npm install",
         "install:server": "cd src/mcp-server && npm install",
-        "install:all": "npm install && npm run install:client && npm run install:auto-client && npm run install:server",
+        "install:metadata-client": "cd src/metadata-client && npm install",
+        "install:all": "npm install && npm run install:client && npm run install:auto-client && npm run install:metadata-client && npm run install:server",
         "deploy": "node scripts/deploy.js",
         "cleanup": "node scripts/cleanup.js",
         "start:server": "cd src/mcp-server && node index.js",
         "start:client": "cd src/client && node index.js",
         "start:auto-client": "cd src/auto-client && node index.js",
-        "dev": "concurrently \"npm run start:server\" \"npm run start:client\" \"npm run start:auto-client\""
+        "start:metadata-client": "cd src/metadata-client && node index.js",
+        "dev": "concurrently \"npm run start:server\" \"npm run start:client\" \"npm run start:auto-client\" \"npm run start:metadata-client\""
     },
     "repository": {
         "type": "git",
@@ -22,9 +24,14 @@
     "keywords": [
         "mcp",
         "oauth",
+        "oauth2.1",
         "aws",
         "cognito",
-        "dynamic-client-registration"
+        "dynamic-client-registration",
+        "client-id-metadata-document",
+        "cimd",
+        "pkce",
+        "model-context-protocol"
     ],
     "author": "Empires Security Labs",
     "license": "MIT",

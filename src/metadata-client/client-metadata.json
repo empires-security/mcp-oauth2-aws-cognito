@@ -1,0 +1,9 @@
+{
+  "client_id": "http://localhost:3003/client-metadata.json",
+  "redirect_uris": ["http://localhost:3003/callback"],
+  "client_name": "mcp-oauth-demo-metadata-client",
+  "client_uri": "http://localhost:3003",
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none"
+}
