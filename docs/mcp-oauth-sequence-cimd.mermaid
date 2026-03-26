@@ -1,0 +1,52 @@
+sequenceDiagram
+    participant User
+    participant MetadataClient as Metadata Client<br/>(localhost:3003)
+    participant MCPServer as MCP Server<br/>(localhost:3001)
+    participant DCRLambda as DCR Lambda<br/>(API Gateway)
+    participant Cognito as AWS Cognito<br/>(Auth Server)
+
+    Note over MetadataClient: Client hosts metadata at<br/>/client-metadata.json
+
+    User->>MetadataClient: Click "Log in"
+
+    Note over MetadataClient,MCPServer: Step 1: Discovery (same as all clients)
+    MetadataClient->>MCPServer: GET /v1/contexts (no auth)
+    MCPServer-->>MetadataClient: 401 + WWW-Authenticate header<br/>(resource_metadata, scope)
+    MetadataClient->>MCPServer: GET /.well-known/oauth-protected-resource
+    MCPServer-->>MetadataClient: Protected Resource Metadata (PRM)
+    MetadataClient->>MCPServer: GET /.well-known/oauth-authorization-server
+    MCPServer-->>MetadataClient: Auth Server Metadata<br/>(authorization_endpoint, token_endpoint point to MCP server,<br/>client_id_metadata_document_supported: true)
+
+    Note over MetadataClient: Step 2: Check CIMD support
+    MetadataClient->>MetadataClient: Verify client_id_metadata_document_supported === true
+
+    Note over MetadataClient,Cognito: Step 3: Standard OAuth Authorization (client uses URL as client_id)
+    MetadataClient->>MCPServer: GET /oauth/authorize<br/>client_id=http://localhost:3003/client-metadata.json<br/>code_challenge=xxx, state=xxx, resource=http://localhost:3001
+    Note over MCPServer: Detects URL-based client_id
+    MCPServer->>MetadataClient: Fetch GET /client-metadata.json
+    MetadataClient-->>MCPServer: Client ID Metadata Document (JSON)
+    MCPServer->>MCPServer: Validate: client_id matches URL,<br/>redirect_uris present, structure valid
+
+    Note over MCPServer,DCRLambda: Bridge to DCR (transparent to client)
+    MCPServer->>DCRLambda: POST /v1/register<br/>(redirect_uris, client_name, scope)
+    DCRLambda->>Cognito: CreateUserPoolClient
+    Cognito-->>DCRLambda: cognito_client_id, client_secret
+    DCRLambda-->>MCPServer: Registration response (cached)
+
+    MCPServer->>Cognito: Redirect to /oauth2/authorize<br/>(with mapped cognito_client_id)
+    Cognito->>User: Display login / consent
+    User->>Cognito: Authenticate
+    Cognito-->>MetadataClient: Redirect with authorization code
+
+    Note over MetadataClient,Cognito: Step 4: Token Exchange (client still uses URL as client_id)
+    MetadataClient->>MCPServer: POST /oauth/token<br/>client_id=http://localhost:3003/client-metadata.json<br/>code=xxx, code_verifier=xxx
+    Note over MCPServer: Maps URL client_id to cached<br/>Cognito credentials
+    MCPServer->>Cognito: POST /oauth2/token<br/>(with mapped cognito_client_id + client_secret)
+    Cognito-->>MCPServer: access_token, refresh_token, id_token
+    MCPServer-->>MetadataClient: access_token, refresh_token, id_token
+
+    Note over MetadataClient,MCPServer: Step 5: Authenticated API Call
+    MetadataClient->>MCPServer: GET /v1/contexts<br/>Authorization: Bearer {access_token}
+    MCPServer->>MCPServer: Validate JWT (JWKS, issuer)
+    MCPServer-->>MetadataClient: Protected resource data
+    MetadataClient-->>User: Display MCP data
