@@ -52,7 +52,17 @@ A variant of the MCP Client that adds:
 - OAuth flow using dynamically obtained credentials
 - **Fully provider-agnostic** - works with any OAuth server that supports DCR
 
-### 5. Dynamic Client Registration API (API Gateway + Lambda)
+### 5. Metadata Client - CIMD (Express.js)
+
+A standard OAuth client that uses Client ID Metadata Documents for identity:
+- **Hosts its own metadata document** at `/client-metadata.json`
+- Uses the metadata URL as its `client_id` (e.g., `http://localhost:3003/client-metadata.json`)
+- Checks for `client_id_metadata_document_supported` in authorization server metadata
+- Uses standard `authorization_endpoint` and `token_endpoint` with URL as `client_id`
+- **No custom code** — the MCP server's authorization proxy handles CIMD transparently
+- Demonstrates the MCP 2025-11-25 recommended client registration method
+
+### 6. Dynamic Client Registration API (API Gateway + Lambda)
 
 Provides the backend for Dynamic Client Registration:
 - API Gateway endpoints for registering clients
@@ -104,6 +114,40 @@ The complete OAuth 2.1 flow in this implementation works as follows:
    - When access token expires, client uses refresh token
    - Client requests new access token from Cognito
    - Client updates stored tokens
+
+## Client ID Metadata Document (CIMD) Flow
+
+The CIMD flow provides a stateless, URL-based client identity mechanism:
+
+1. **Metadata Publishing**
+   - Client hosts a JSON metadata document at a URL (e.g., `http://localhost:3003/client-metadata.json`)
+   - Document contains: `client_id` (matching the URL), `redirect_uris`, `client_name`, etc.
+
+2. **Discovery with CIMD Check**
+   - Client discovers the authorization server via the standard PRM flow
+   - Client checks for `client_id_metadata_document_supported: true` in auth server metadata
+
+3. **Standard OAuth Flow with URL client_id**
+   - Client redirects to the discovered `authorization_endpoint` using its metadata URL as `client_id`
+   - The MCP server's authorization proxy detects the URL-based `client_id`
+   - Proxy fetches and validates the metadata document from the client's URL
+   - Proxy creates a Cognito app client via existing DCR Lambda infrastructure (cached)
+   - Proxy forwards the request to Cognito with mapped credentials
+   - User authenticates, Cognito redirects back to client with authorization code
+
+4. **Token Exchange**
+   - Client POSTs to the discovered `token_endpoint` using its metadata URL as `client_id`
+   - Proxy maps the URL to cached Cognito credentials and forwards to Cognito
+   - Client receives tokens — flow is identical to pre-registered and DCR clients from here
+
+### CIMD vs DCR
+
+| Aspect | DCR | CIMD |
+|--------|-----|------|
+| Client Identity | Server-assigned UUID | Client-published URL |
+| Registration | Client POSTs to registration endpoint | Server fetches client's metadata |
+| Metadata Updates | Requires re-registration | Updated at the URL (cached) |
+| Trust Model | Server trusts registration request | Server validates published metadata |
 
 ## Dynamic Client Registration Flow
 
@@ -196,7 +240,14 @@ This implementation follows OAuth 2.1 and MCP security best practices:
      * Initial access tokens for registration authorization
      * Client authentication (mTLS) for secure registration
      * Registration policies and approval workflows
-     * Rate limiting to prevent abuse   
+     * Rate limiting to prevent abuse
+
+7. **Client ID Metadata Document Security**
+   - SSRF protection when fetching metadata (blocked private IP ranges)
+   - HTTPS enforcement in production (HTTP localhost allowed in dev only)
+   - Strict `client_id` to URL matching prevents impersonation
+   - Response size limits (64KB) and fetch timeouts (5s) prevent abuse
+   - Redirect URI validation prevents open-redirect attacks
 
 ## Diagrams
 - [Architecture Diagram](./mcp-oauth-architecture.mermaid)

@@ -19,6 +19,9 @@ module.exports = {
   
   // Auto Client Base URL
   autoClientBaseUrl: process.env.AUTO_CLIENT_URL || 'http://localhost:3002',
+
+  // Metadata Client Base URL (CIMD)
+  metadataClientBaseUrl: process.env.METADATA_CLIENT_URL || 'http://localhost:3003',
   
   // Dynamic Client Registration endpoint
   dcrEndpoint: process.env.DCR_ENDPOINT || 'https://api-gateway-url/v1/register',
@@ -53,7 +56,7 @@ module.exports = {
       const userPoolId = process.env.COGNITO_USER_POOL_ID;
       
       if (!region || !userPoolId) {
-        console.warn('Missing Cognito region or user pool ID for constructing auth server URL');
+        // Not all services need Cognito config (e.g., metadata-client discovers dynamically)
         return '';
       }
       

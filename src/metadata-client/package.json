@@ -1,0 +1,19 @@
+{
+  "name": "mcp-oauth2-aws-cognito-metadata-client",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Empires Security Labs",
+  "license": "MIT",
+  "description": "Client ID Metadata Document (CIMD) client for MCP OAuth 2.1",
+  "dependencies": {
+    "axios": "^1.9.0",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-session": "^1.18.1"
+  }
+}
