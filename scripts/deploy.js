@@ -200,6 +200,19 @@ MCP_SERVER_URL=http://localhost:3001
 DCR_ENDPOINT=${dcrEndpoint}
 `;
 
+  // Create metadata-client .env file (CIMD client)
+  const metadataClientEnv = `# Metadata Client Configuration (CIMD)
+METADATA_CLIENT_PORT=3003
+METADATA_CLIENT_URL=http://localhost:3003
+
+# MCP Server URL
+MCP_SERVER_URL=http://localhost:3001
+
+# Cognito Configuration (shared config uses these for auth server URL construction)
+COGNITO_REGION=${REGION}
+COGNITO_USER_POOL_ID=${userPoolId}
+`;
+
   // Create server .env file
   const serverEnv = `# Server Configuration
 PORT=3001
@@ -219,6 +232,7 @@ DCR_ENDPOINT=${dcrEndpoint}
   // Ensure directories exist
   ensureDirectoryExists(path.join(basePath, "src", "client"));
   ensureDirectoryExists(path.join(basePath, "src", "auto-client"));
+  ensureDirectoryExists(path.join(basePath, "src", "metadata-client"));
   ensureDirectoryExists(path.join(basePath, "src", "mcp-server"));
 
   // Write the .env files
@@ -227,9 +241,13 @@ DCR_ENDPOINT=${dcrEndpoint}
     path.join(basePath, "src", "auto-client", ".env"),
     autoClientEnv
   );
+  fs.writeFileSync(
+    path.join(basePath, "src", "metadata-client", ".env"),
+    metadataClientEnv
+  );
   fs.writeFileSync(path.join(basePath, "src", "mcp-server", ".env"), serverEnv);
 
-  console.log("Created .env files for client, auto-client, and server");
+  console.log("Created .env files for client, auto-client, metadata-client, and server");
 }
 
 function ensureDirectoryExists(directory) {
